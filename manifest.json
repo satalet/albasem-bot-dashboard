@@ -1,24 +1,24 @@
 {
-  "name": "tahakkum bot albasem",
-  "short_name": "bot albasem",
-  "id": "/albasem-bot-dashboard/",
-  "start_url": "/albasem-bot-dashboard/",
-  "scope": "/albasem-bot-dashboard/",
+  "name": "لوحة تحكم بوت الباسم",
+  "short_name": "تحكم الباسم",
+  "id": "./?v=4",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "icons": [
     {
-      "src": "/albasem-bot-dashboard/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/albasem-bot-dashboard/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
