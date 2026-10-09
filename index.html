@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم بوت الباسم</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBOUvJ9gAmLMZ9N2Ux044Vq4PZ5q0HGw88",
+            authDomain: "albasem-bot-control.firebaseapp.com",
+            databaseURL: "https://albasem-bot-control-default-rtdb.firebaseio.com",
+            projectId: "albasem-bot-control",
+            storageBucket: "albasem-bot-control.firebasestorage.app",
+            messagingSenderId: "283984476655",
+            appId: "1:283984476655:web:b6546a3ed34505ca415e1a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const authScreen = document.getElementById("auth-screen");
+        const panelScreen = document.getElementById("panel-screen");
+        const loginBtn = document.getElementById("login-btn");
+        const logoutBtn = document.getElementById("logout-btn");
+        const statusBadge = document.getElementById("status-badge");
+        const lastSyncBadge = document.getElementById("last-sync");
+        const btnStart = document.getElementById("btn-start");
+        const btnStop = document.getElementById("btn-stop");
+
+        loginBtn.addEventListener("click", async () => {
+            const email = document.getElementById("login-email").value;
+            const pass = document.getElementById("login-pass").value;
+            const errDiv = document.getElementById("auth-error");
+            try {
+                errDiv.classList.add("hidden");
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (err) {
+                errDiv.innerText = "خطأ في تسجيل الدخول: " + err.message;
+                errDiv.classList.remove("hidden");
+            }
+        });
+
+        logoutBtn.addEventListener("click", () => signOut(auth));
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authScreen.classList.add("hidden");
+                panelScreen.classList.remove("hidden");
+                initRealtime();
+            } else {
+                panelScreen.classList.add("hidden");
+                authScreen.classList.remove("hidden");
+            }
+        });
+
+        function initRealtime() {
+            const controlRef = ref(db, 'bot_control');
+            onValue(controlRef, (snapshot) => {
+                const data = snapshot.val() || {};
+                const isRunning = data.status === "running";
+
+                if (isRunning) {
+                    statusBadge.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-900 text-green-300">🟢 شغال بالخلفية (PID: ${data.pid || 'نشط'})</span>`;
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                } else {
+                    statusBadge.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-900 text-red-300">🔴 متوقف تماماً</span>`;
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                }
+
+                lastSyncBadge.innerText = data.heartbeat || data.last_sync || "غير متزامن";
+            });
+        }
+
+        btnStart.addEventListener("click", () => {
+            update(ref(db, 'bot_control'), { target_state: "START" });
+        });
+
+        btnStop.addEventListener("click", () => {
+            update(ref(db, 'bot_control'), { target_state: "STOP" });
+        });
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <!-- شاشة تسجيل الدخول -->
+    <div id="auth-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
+        <h2 class="text-xl font-bold text-center mb-6 text-sky-400">📡 تسجيل الدخول - تحكم الباسم</h2>
+        <div id="auth-error" class="hidden mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-xs text-center"></div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
+                <input id="login-email" type="email" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">كلمة المرور</label>
+                <input id="login-pass" type="password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-lg transition duration-200">دخول للوحة</button>
+        </div>
+    </div>
+
+    <!-- شاشة التحكم الرئيسية -->
+    <div id="panel-screen" class="hidden w-full max-w-md bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
+            <h1 class="text-lg font-bold text-sky-400">📡 لوحة تحكم بوت واتساب</h1>
+            <button id="logout-btn" class="text-xs text-slate-400 hover:text-red-400">خروج</button>
+        </div>
+
+        <div class="bg-slate-900/60 p-4 rounded-xl mb-6 border border-slate-700/50 flex flex-col items-center justify-center space-y-2">
+            <div id="status-badge">
+                <span class="text-slate-400 text-sm">جاري جلب الحالة...</span>
+            </div>
+            <div class="text-xs text-slate-400">آخر تحديث لنبض البوت: <span id="last-sync" class="text-sky-300 font-mono">--:--:--</span></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-900/20">
+                ▶ تشغيل
+            </button>
+            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-rose-900/20">
+                ⏹ إيقاف فوراً
+            </button>
+        </div>
+    </div>
+
+</body>
+</html>
