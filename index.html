@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم بوت الباسم</title>
+    
+    <!-- PWA Settings for Xiaomi / Android -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="icon.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -88,7 +97,7 @@
         });
     </script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 select-none">
 
     <!-- شاشة تسجيل الدخول -->
     <div id="auth-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
@@ -122,10 +131,10 @@
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-900/20">
+            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-900/20 active:scale-95">
                 ▶ تشغيل
             </button>
-            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-rose-900/20">
+            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-rose-900/20 active:scale-95">
                 ⏹ إيقاف فوراً
             </button>
         </div>
