@@ -1,7 +1,7 @@
 {
   "name": "لوحة تحكم بوت الباسم",
-  "short_name": "بوت الباسم",
-  "id": "/albasem-bot-dashboard/",
+  "short_name": "تحكم الباسم",
+  "id": "/albasem-bot-dashboard-v2/",
   "start_url": "/albasem-bot-dashboard/",
   "scope": "/albasem-bot-dashboard/",
   "display": "standalone",
