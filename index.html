@@ -5,15 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم بوت الباسم</title>
     
-    <!-- PWA Settings for Xiaomi / Android -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="icon" type="image/png" href="icon-192.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js');
+            });
+        }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 select-none">
+
+    <div id="auth-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
+        <h2 class="text-xl font-bold text-center mb-6 text-sky-400">📡 تسجيل الدخول - تحكم الباسم</h2>
+        <div id="auth-error" class="hidden mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-xs text-center"></div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
+                <input id="login-email" type="email" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">كلمة المرور</label>
+                <input id="login-pass" type="password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
+            </div>
+            <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-lg transition duration-200">دخول للوحة</button>
+        </div>
+    </div>
+
+    <div id="panel-screen" class="hidden w-full max-w-md bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
+            <h1 class="text-lg font-bold text-sky-400">📡 لوحة تحكم بوت واتساب</h1>
+            <div class="flex items-center gap-3">
+                <button id="pwa-install-btn" class="hidden text-xs bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1 rounded-md font-bold transition">📲 تثبيت كتطبيق</button>
+                <button id="logout-btn" class="text-xs text-slate-400 hover:text-red-400">خروج</button>
+            </div>
+        </div>
+
+        <div class="bg-slate-900/60 p-4 rounded-xl mb-6 border border-slate-700/50 flex flex-col items-center justify-center space-y-2">
+            <div id="status-badge">
+                <span class="text-slate-400 text-sm">جاري جلب الحالة...</span>
+            </div>
+            <div class="text-xs text-slate-400">آخر تحديث لنبض البوت: <span id="last-sync" class="text-sky-300 font-mono">--:--:--</span></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-900/20 active:scale-95">
+                ▶ تشغيل
+            </button>
+            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-rose-900/20 active:scale-95">
+                ⏹ إيقاف فوراً
+            </button>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -41,6 +91,25 @@
         const lastSyncBadge = document.getElementById("last-sync");
         const btnStart = document.getElementById("btn-start");
         const btnStop = document.getElementById("btn-stop");
+        const installBtn = document.getElementById("pwa-install-btn");
+
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.classList.add('hidden');
+                }
+                deferredPrompt = null;
+            }
+        });
 
         loginBtn.addEventListener("click", async () => {
             const email = document.getElementById("login-email").value;
@@ -96,54 +165,5 @@
             update(ref(db, 'bot_control'), { target_state: "STOP" });
         });
     </script>
-    <script>
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("service-worker.js");
-        }
-    </script>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 select-none">
-
-    <!-- شاشة تسجيل الدخول -->
-    <div id="auth-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
-        <h2 class="text-xl font-bold text-center mb-6 text-sky-400">📡 تسجيل الدخول - تحكم الباسم</h2>
-        <div id="auth-error" class="hidden mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-xs text-center"></div>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
-                <input id="login-email" type="email" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">كلمة المرور</label>
-                <input id="login-pass" type="password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
-            </div>
-            <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-lg transition duration-200">دخول للوحة</button>
-        </div>
-    </div>
-
-    <!-- شاشة التحكم الرئيسية -->
-    <div id="panel-screen" class="hidden w-full max-w-md bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
-        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
-            <h1 class="text-lg font-bold text-sky-400">📡 لوحة تحكم بوت واتساب</h1>
-            <button id="logout-btn" class="text-xs text-slate-400 hover:text-red-400">خروج</button>
-        </div>
-
-        <div class="bg-slate-900/60 p-4 rounded-xl mb-6 border border-slate-700/50 flex flex-col items-center justify-center space-y-2">
-            <div id="status-badge">
-                <span class="text-slate-400 text-sm">جاري جلب الحالة...</span>
-            </div>
-            <div class="text-xs text-slate-400">آخر تحديث لنبض البوت: <span id="last-sync" class="text-sky-300 font-mono">--:--:--</span></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-900/20 active:scale-95">
-                ▶ تشغيل
-            </button>
-            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-rose-900/20 active:scale-95">
-                ⏹ إيقاف فوراً
-            </button>
-        </div>
-    </div>
-
 </body>
 </html>
