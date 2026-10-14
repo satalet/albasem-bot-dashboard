@@ -38,6 +38,7 @@
         const lastSyncBadge = document.getElementById("last-sync");
         const btnStart = document.getElementById("btn-start");
         const btnStop = document.getElementById("btn-stop");
+        const btnNtfy = document.getElementById("btn-ntfy");
 
         let lastData = {};
 
@@ -103,6 +104,19 @@
             }
 
             lastSyncBadge.innerText = lastData.heartbeat || lastData.last_sync || "--:--:--";
+
+            // تحديث حالة زر إشعارات ntfy
+            const isNtfy = lastData.ntfy_enabled !== false;
+            if (btnNtfy) {
+                if (isNtfy) {
+                    btnNtfy.innerHTML = "🔔 إشعارات الجوال: مفعّلة";
+                    btnNtfy.className = "w-full bg-slate-800 hover:bg-slate-700 border border-emerald-500/40 text-emerald-400 font-bold py-2.5 rounded-xl transition shadow text-xs sm:text-sm";
+                } else {
+                    btnNtfy.innerHTML = "🔕 إشعارات الجوال: معطّلة";
+                    btnNtfy.className = "w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 font-bold py-2.5 rounded-xl transition shadow text-xs sm:text-sm";
+                }
+            }
+
         }
 
         function initRealtime() {
@@ -118,6 +132,13 @@
         btnStart.addEventListener("click", () => {
             update(ref(db, 'bot_control'), { target_state: "START" });
         });
+
+        if (btnNtfy) {
+            btnNtfy.addEventListener("click", () => {
+                const currentStatus = lastData.ntfy_enabled !== false;
+                update(ref(db, 'bot_control'), { ntfy_enabled: !currentStatus });
+            });
+        }
 
         btnStop.addEventListener("click", () => {
             update(ref(db, 'bot_control'), { target_state: "STOP" });
@@ -182,6 +203,13 @@
             <div class="bg-black/90 rounded-xl p-3 border border-slate-800 font-mono text-xs text-emerald-400 min-h-[52px] flex items-center leading-relaxed break-all select-all shadow-inner" id="log-box">
                 جاري الاتصال بالسيرفر...
             </div>
+        </div>
+
+        <!-- زر تحكم إشعارات ntfy -->
+        <div class="mt-3">
+            <button id="btn-ntfy" class="w-full bg-slate-800 hover:bg-slate-700 border border-emerald-500/40 text-emerald-400 font-bold py-2.5 rounded-xl transition shadow text-xs sm:text-sm">
+                🔔 إشعارات الجوال: مفعّلة
+            </button>
         </div>
 
         <!-- أزرار التحكم -->
