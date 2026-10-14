@@ -4,66 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم بوت الباسم</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="icon" type="image/png" href="icon-192.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js');
-            });
-        }
-    </script>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex items-center justify-center p-4 select-none">
-
-    <div id="auth-screen" class="w-full max-w-sm bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
-        <h2 class="text-xl font-bold text-center mb-6 text-sky-400">📡 تسجيل الدخول - تحكم الباسم</h2>
-        <div id="auth-error" class="hidden mb-4 p-3 bg-red-900/50 border border-red-500 rounded text-red-200 text-xs text-center"></div>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
-                <input id="login-email" type="email" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
-            </div>
-            <div>
-                <label class="block text-xs text-slate-400 mb-1">كلمة المرور</label>
-                <input id="login-pass" type="password" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500">
-            </div>
-            <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-lg transition duration-200">دخول للوحة</button>
-        </div>
-    </div>
-
-    <div id="panel-screen" class="hidden w-full max-w-md bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
-        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-700">
-            <h1 class="text-lg font-bold text-sky-400">📡 لوحة تحكم بوت واتساب</h1>
-            <div class="flex items-center gap-3">
-                <button id="pwa-install-btn" class="hidden text-xs bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1 rounded-md font-bold transition">📲 تثبيت كتطبيق</button>
-                <button id="logout-btn" class="text-xs text-slate-400 hover:text-red-400">خروج</button>
-            </div>
-        </div>
-
-        <div class="bg-slate-900/60 p-4 rounded-xl mb-6 border border-slate-700/50 flex flex-col items-center justify-center space-y-2">
-            <div id="status-badge">
-                <span class="text-slate-400 text-sm">جاري جلب الحالة...</span>
-            </div>
-            <div class="text-xs text-slate-400">آخر تحديث لنبض البوت: <span id="last-sync" class="text-sky-300 font-mono">--:--:--</span></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-900/20 active:scale-95">
-                ▶ تشغيل
-            </button>
-            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-rose-900/20 active:scale-95">
-                ⏹ إيقاف فوراً
-            </button>
-        </div>
-    </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -87,29 +28,18 @@
         const panelScreen = document.getElementById("panel-screen");
         const loginBtn = document.getElementById("login-btn");
         const logoutBtn = document.getElementById("logout-btn");
-        const statusBadge = document.getElementById("status-badge");
+
+        const dotGreen = document.getElementById("dot-green");
+        const dotYellow = document.getElementById("dot-yellow");
+        const dotRed = document.getElementById("dot-red");
+
+        const statusText = document.getElementById("status-text");
+        const logBox = document.getElementById("log-box");
         const lastSyncBadge = document.getElementById("last-sync");
         const btnStart = document.getElementById("btn-start");
         const btnStop = document.getElementById("btn-stop");
-        const installBtn = document.getElementById("pwa-install-btn");
 
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.classList.remove('hidden');
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.classList.add('hidden');
-                }
-                deferredPrompt = null;
-            }
-        });
+        let lastData = {};
 
         loginBtn.addEventListener("click", async () => {
             const email = document.getElementById("login-email").value;
@@ -137,24 +67,52 @@
             }
         });
 
+        function updateUI() {
+            const now = Date.now();
+            const lastSeen = lastData.last_seen || 0;
+            const diffSeconds = Math.floor((now - lastSeen) / 1000);
+            const isOnline = lastSeen > 0 && diffSeconds <= 35;
+            const isConfigRunning = lastData.status === "running";
+
+            // تصفير إضاءة الدوائر
+            dotGreen.className = "w-3.5 h-3.5 rounded-full bg-emerald-950/60 border border-emerald-900";
+            dotYellow.className = "w-3.5 h-3.5 rounded-full bg-amber-950/60 border border-amber-900";
+            dotRed.className = "w-3.5 h-3.5 rounded-full bg-rose-950/60 border border-rose-900";
+
+            if (isConfigRunning && isOnline) {
+                // الحالة 1: شغال طبيعي ومتصل
+                dotGreen.className = "w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse";
+                statusText.innerHTML = `<span class="text-emerald-400 font-bold text-sm">🟢 يعمل بنشاط (PID: ${lastData.pid || 'نشط'})</span>`;
+                logBox.innerText = `[${lastData.heartbeat || '--:--:--'}] ${lastData.last_log || 'البوت قيد الاستماع والتفاعل...'}`;
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+            } else if (isConfigRunning && !isOnline) {
+                // الحالة 2: انقطاع طارئ (كهربا أو نت)
+                dotYellow.className = "w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_#fbbf24] animate-pulse";
+                statusText.innerHTML = `<span class="text-amber-400 font-bold text-sm">🟡 قيد الانتظار (انقطاع كهرباء أو إنترنت)</span>`;
+                logBox.innerText = `⚠️ انقطع الاتصال بالجهاز منذ ${diffSeconds} ثانية. اللوحة بانتظار عودة النظام تلقائياً...`;
+                btnStart.disabled = true;
+                btnStop.disabled = true;
+            } else {
+                // الحالة 3: متوقف يدوياً
+                dotRed.className = "w-3.5 h-3.5 rounded-full bg-rose-500 shadow-[0_0_12px_#f43f5e]";
+                statusText.innerHTML = `<span class="text-rose-400 font-bold text-sm">🔴 متوقف تماماً (يدوياً)</span>`;
+                logBox.innerText = `[${lastData.last_action || '--:--:--'}] البوت متوقف حالياً. انقر على تشغيل للبدء.`;
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+            }
+
+            lastSyncBadge.innerText = lastData.heartbeat || lastData.last_sync || "--:--:--";
+        }
+
         function initRealtime() {
             const controlRef = ref(db, 'bot_control');
             onValue(controlRef, (snapshot) => {
-                const data = snapshot.val() || {};
-                const isRunning = data.status === "running";
-
-                if (isRunning) {
-                    statusBadge.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-900 text-green-300">🟢 شغال بالخلفية (PID: ${data.pid || 'نشط'})</span>`;
-                    btnStart.disabled = true;
-                    btnStop.disabled = false;
-                } else {
-                    statusBadge.innerHTML = `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-red-900 text-red-300">🔴 متوقف تماماً</span>`;
-                    btnStart.disabled = false;
-                    btnStop.disabled = true;
-                }
-
-                lastSyncBadge.innerText = data.heartbeat || data.last_sync || "غير متزامن";
+                lastData = snapshot.val() || {};
+                updateUI();
             });
+
+            setInterval(updateUI, 5000);
         }
 
         btnStart.addEventListener("click", () => {
@@ -165,5 +123,77 @@
             update(ref(db, 'bot_control'), { target_state: "STOP" });
         });
     </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-sky-500 selection:text-white">
+
+    <!-- شاشة تسجيل الدخول -->
+    <div id="auth-screen" class="w-full max-w-sm bg-slate-900 p-6 rounded-2xl shadow-2xl border border-slate-800">
+        <h2 class="text-xl font-bold text-center mb-6 text-sky-400">📡 لوحة تحكم الباسم</h2>
+        <div id="auth-error" class="hidden mb-4 p-3 bg-red-950/80 border border-red-500/50 rounded text-red-200 text-xs text-center"></div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">البريد الإلكتروني</label>
+                <input id="login-email" type="email" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500 text-slate-200">
+            </div>
+            <div>
+                <label class="block text-xs text-slate-400 mb-1">كلمة المرور</label>
+                <input id="login-pass" type="password" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm focus:outline-none focus:border-sky-500 text-slate-200">
+            </div>
+            <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-lg transition">تسجيل الدخول</button>
+        </div>
+    </div>
+
+    <!-- شاشة التحكم الرئيسية -->
+    <div id="panel-screen" class="hidden w-full max-w-md bg-slate-900 p-6 rounded-2xl shadow-2xl border border-slate-800">
+        
+        <!-- الهيدر والدوائر الثلاث -->
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+            <div class="flex items-center space-x-2 space-x-reverse">
+                <span class="text-base font-bold text-slate-100">بوت واتساب الباسم</span>
+            </div>
+            
+            <!-- مؤشر الحالات الثلاث -->
+            <div class="flex items-center gap-2 bg-slate-950/80 px-3 py-1.5 rounded-full border border-slate-800">
+                <div id="dot-green" title="يعمل بنشاط" class="w-3.5 h-3.5 rounded-full bg-emerald-950/60 border border-emerald-900"></div>
+                <div id="dot-yellow" title="قيد الانتظار (طوارئ)" class="w-3.5 h-3.5 rounded-full bg-amber-950/60 border border-amber-900"></div>
+                <div id="dot-red" title="متوقف يدوياً" class="w-3.5 h-3.5 rounded-full bg-rose-950/60 border border-rose-900"></div>
+            </div>
+
+            <button id="logout-btn" class="text-xs text-slate-400 hover:text-rose-400 transition">خروج</button>
+        </div>
+
+        <!-- بطاقة الحالة -->
+        <div class="bg-slate-950/90 p-4 rounded-xl mb-4 border border-slate-800/80 text-center space-y-2">
+            <div id="status-text">
+                <span class="text-slate-400 text-sm">جاري التحقق من النبض...</span>
+            </div>
+            <div class="text-[11px] text-slate-500">آخر توقيت نبض مسجل: <span id="last-sync" class="text-sky-400 font-mono">--:--:--</span></div>
+        </div>
+
+        <!-- شريط التيرمينال المصغر (آخر نشاط مسجل) -->
+        <div class="mb-6">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1 px-1">
+                <span>سجل النشاط المباشر (Console)</span>
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                </span>
+            </div>
+            <div class="bg-black/90 rounded-xl p-3 border border-slate-800 font-mono text-xs text-emerald-400 min-h-[52px] flex items-center leading-relaxed break-all select-all shadow-inner" id="log-box">
+                جاري الاتصال بالسيرفر...
+            </div>
+        </div>
+
+        <!-- أزرار التحكم -->
+        <div class="grid grid-cols-2 gap-4">
+            <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-950/40">
+                ▶ تشغيل
+            </button>
+            <button id="btn-stop" class="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-rose-950/40">
+                ⏹ إيقاف فوراً
+            </button>
+        </div>
+    </div>
+
 </body>
 </html>
