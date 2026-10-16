@@ -1,3 +1,4 @@
+<!-- الكود الكامل المحدث الذي أرسلته للتو -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -75,27 +76,23 @@
             const isOnline = lastSeen > 0 && diffSeconds <= 35;
             const isConfigRunning = lastData.status === "running";
 
-            // تصفير إضاءة الدوائر
             dotGreen.className = "w-3.5 h-3.5 rounded-full bg-emerald-950/60 border border-emerald-900";
             dotYellow.className = "w-3.5 h-3.5 rounded-full bg-amber-950/60 border border-amber-900";
             dotRed.className = "w-3.5 h-3.5 rounded-full bg-rose-950/60 border border-rose-900";
 
             if (isConfigRunning && isOnline) {
-                // الحالة 1: شغال طبيعي ومتصل
                 dotGreen.className = "w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399] animate-pulse";
                 statusText.innerHTML = `<span class="text-emerald-400 font-bold text-sm">🟢 يعمل بنشاط (PID: ${lastData.pid || 'نشط'})</span>`;
                 logBox.innerText = `[${lastData.heartbeat || '--:--:--'}] ${lastData.last_log || 'البوت قيد الاستماع والتفاعل...'}`;
                 btnStart.disabled = true;
                 btnStop.disabled = false;
             } else if (isConfigRunning && !isOnline) {
-                // الحالة 2: انقطاع طارئ (كهربا أو نت)
                 dotYellow.className = "w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_12px_#fbbf24] animate-pulse";
                 statusText.innerHTML = `<span class="text-amber-400 font-bold text-sm">🟡 قيد الانتظار (انقطاع كهرباء أو إنترنت)</span>`;
                 logBox.innerText = `⚠️ انقطع الاتصال بالجهاز منذ ${diffSeconds} ثانية. اللوحة بانتظار عودة النظام تلقائياً...`;
                 btnStart.disabled = true;
                 btnStop.disabled = true;
             } else {
-                // الحالة 3: متوقف يدوياً
                 dotRed.className = "w-3.5 h-3.5 rounded-full bg-rose-500 shadow-[0_0_12px_#f43f5e]";
                 statusText.innerHTML = `<span class="text-rose-400 font-bold text-sm">🔴 متوقف تماماً (يدوياً)</span>`;
                 logBox.innerText = `[${lastData.last_action || '--:--:--'}] البوت متوقف حالياً. انقر على تشغيل للبدء.`;
@@ -105,7 +102,6 @@
 
             lastSyncBadge.innerText = lastData.heartbeat || lastData.last_sync || "--:--:--";
 
-            // تحديث حالة زر إشعارات ntfy
             const isNtfy = lastData.ntfy_enabled !== false;
             if (btnNtfy) {
                 if (isNtfy) {
@@ -116,7 +112,6 @@
                     btnNtfy.className = "w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 font-bold py-2.5 rounded-xl transition shadow text-xs sm:text-sm";
                 }
             }
-
         }
 
         function initRealtime() {
@@ -125,29 +120,37 @@
                 lastData = snapshot.val() || {};
                 updateUI();
             });
-
             setInterval(updateUI, 5000);
         }
 
-        btnStart.addEventListener("click", () => {
-            update(ref(db, 'bot_control'), { target_state: "START" });
-        });
+        document.addEventListener("DOMContentLoaded", () => {
+            const btnStartElem = document.getElementById("btn-start");
+            const btnStopElem = document.getElementById("btn-stop");
+            const btnNtfyElem = document.getElementById("btn-ntfy");
 
-        if (btnNtfy) {
-            btnNtfy.addEventListener("click", () => {
-                const currentStatus = lastData.ntfy_enabled !== false;
-                update(ref(db, 'bot_control'), { ntfy_enabled: !currentStatus });
-            });
-        }
+            if (btnStartElem) {
+                btnStartElem.addEventListener("click", () => {
+                    update(ref(db, 'bot_control'), { target_state: "START" });
+                });
+            }
 
-        btnStop.addEventListener("click", () => {
-            update(ref(db, 'bot_control'), { target_state: "STOP" });
+            if (btnStopElem) {
+                btnStopElem.addEventListener("click", () => {
+                    update(ref(db, 'bot_control'), { target_state: "STOP" });
+                });
+            }
+
+            if (btnNtfyElem) {
+                btnNtfyElem.addEventListener("click", () => {
+                    const currentStatus = lastData.ntfy_enabled !== false;
+                    update(ref(db, 'bot_control'), { ntfy_enabled: !currentStatus });
+                });
+            }
         });
     </script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 selection:bg-sky-500 selection:text-white">
 
-    <!-- شاشة تسجيل الدخول -->
     <div id="auth-screen" class="w-full max-w-sm bg-slate-900 p-6 rounded-2xl shadow-2xl border border-slate-800">
         <h2 class="text-xl font-bold text-center mb-6 text-sky-400">📡 لوحة تحكم الباسم</h2>
         <div id="auth-error" class="hidden mb-4 p-3 bg-red-950/80 border border-red-500/50 rounded text-red-200 text-xs text-center"></div>
@@ -164,26 +167,19 @@
         </div>
     </div>
 
-    <!-- شاشة التحكم الرئيسية -->
     <div id="panel-screen" class="hidden w-full max-w-md bg-slate-900 p-6 rounded-2xl shadow-2xl border border-slate-800">
-        
-        <!-- الهيدر والدوائر الثلاث -->
         <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
             <div class="flex items-center space-x-2 space-x-reverse">
                 <span class="text-base font-bold text-slate-100">بوت واتساب الباسم</span>
             </div>
-            
-            <!-- مؤشر الحالات الثلاث -->
             <div class="flex items-center gap-2 bg-slate-950/80 px-3 py-1.5 rounded-full border border-slate-800">
                 <div id="dot-green" title="يعمل بنشاط" class="w-3.5 h-3.5 rounded-full bg-emerald-950/60 border border-emerald-900"></div>
                 <div id="dot-yellow" title="قيد الانتظار (طوارئ)" class="w-3.5 h-3.5 rounded-full bg-amber-950/60 border border-amber-900"></div>
                 <div id="dot-red" title="متوقف يدوياً" class="w-3.5 h-3.5 rounded-full bg-rose-950/60 border border-rose-900"></div>
             </div>
-
             <button id="logout-btn" class="text-xs text-slate-400 hover:text-rose-400 transition">خروج</button>
         </div>
 
-        <!-- بطاقة الحالة -->
         <div class="bg-slate-950/90 p-4 rounded-xl mb-4 border border-slate-800/80 text-center space-y-2">
             <div id="status-text">
                 <span class="text-slate-400 text-sm">جاري التحقق من النبض...</span>
@@ -191,7 +187,6 @@
             <div class="text-[11px] text-slate-500">آخر توقيت نبض مسجل: <span id="last-sync" class="text-sky-400 font-mono">--:--:--</span></div>
         </div>
 
-        <!-- شريط التيرمينال المصغر (آخر نشاط مسجل) -->
         <div class="mb-6">
             <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1 px-1">
                 <span>سجل النشاط المباشر (Console)</span>
@@ -205,15 +200,13 @@
             </div>
         </div>
 
-        <!-- زر تحكم إشعارات ntfy -->
         <div class="mt-3">
             <button id="btn-ntfy" class="w-full bg-slate-800 hover:bg-slate-700 border border-emerald-500/40 text-emerald-400 font-bold py-2.5 rounded-xl transition shadow text-xs sm:text-sm">
                 🔔 إشعارات الجوال: مفعّلة
             </button>
         </div>
 
-        <!-- أزرار التحكم -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-4 mt-4">
             <button id="btn-start" class="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-950/40">
                 ▶ تشغيل
             </button>
@@ -222,6 +215,5 @@
             </button>
         </div>
     </div>
-
 </body>
 </html>
